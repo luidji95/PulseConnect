@@ -1,6 +1,57 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { loginUser } from '../../lib/api';
 
-export const Login = () => {
+interface LoginProps {
+  onShowRegister?: () => void;
+}
+
+export const Login: React.FC<LoginProps> = ({ onShowRegister }) => {
+  const [showPassword, setShowPassword] = useState(false);
+  
+  const handleRegisterClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (onShowRegister) {
+      onShowRegister();
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault(); // Sprečava refresh stranice
+  
+  console.log("🖱️ Kliknuo sam Submit!");
+  
+  // 1. Uzmi vrednosti iz input polja
+  const emailInput = document.getElementById('email') as HTMLInputElement;
+  const passwordInput = document.getElementById('password') as HTMLInputElement;
+  
+  const email = emailInput.value;
+  const password = passwordInput.value;
+  
+  console.log("📝 Uneti podaci:");
+  console.log("Email:", email);
+  console.log("Password:", password);
+  
+  // 2. Prosta validacija
+  if (!email || !password) {
+    alert("Molimo popunite sva polja!");
+    return;
+  }
+  
+  // 3. Pozovi našu API funkciju
+  console.log("🔗 Pozivam loginUser()...");
+  const result = await loginUser(email, password);
+  
+  // 4. Proveri rezultat
+  if (result.success) {
+    console.log("🎉 USPEH! Sada ću preusmeriti na dashboard...");
+    // Ovde ćemo kasnije dodati preusmeravanje
+    alert("Login uspešan! (Za sada samo alert)");
+  } else {
+    console.log("😞 Neuspeh:", result.error);
+    alert(`Greška: ${result.error}`);
+  }
+};
+
   return (
     <div className='min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4'>
       <div className='flex flex-col md:flex-row w-full max-w-6xl rounded-2xl overflow-hidden shadow-2xl'>
@@ -49,7 +100,15 @@ export const Login = () => {
           </div>
           
           <div className='mt-12 text-center'>
-            <p className='text-indigo-200'>Nemate nalog? <span className='text-yellow-300 font-semibold cursor-pointer hover:underline'>Registrujte se</span></p>
+            <p className='text-indigo-200'>
+              Nemate nalog?{' '}
+              <button 
+                onClick={handleRegisterClick}
+                className='text-yellow-300 font-semibold hover:underline focus:outline-none'
+              >
+                Registrujte se
+              </button>
+            </p>
           </div>
         </div>
         
@@ -60,7 +119,7 @@ export const Login = () => {
             <p className='text-gray-600 mt-2'>Unesite svoje podatke za prijavu</p>
           </div>
           
-          <form className='space-y-6'>
+          <form onSubmit={handleSubmit} className='space-y-6'>
             <div>
               <label htmlFor='email' className='block text-sm font-medium text-gray-700 mb-2'>
                 Email adresa
@@ -87,14 +146,18 @@ export const Login = () => {
                   <i className='fas fa-lock text-gray-400'></i>
                 </div>
                 <input
-                  type='password'
+                  type={showPassword ? 'text' : 'password'}
                   id='password'
                   className='w-full pl-10 pr-12 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition duration-300'
                   placeholder='Unesite vašu lozinku'
                 />
                 <div className='absolute inset-y-0 right-0 pr-3 flex items-center'>
-                  <button type='button' className='text-gray-400 hover:text-gray-600 focus:outline-none'>
-                    <i className='fas fa-eye'></i>
+                  <button 
+                    type='button' 
+                    className='text-gray-400 hover:text-gray-600 focus:outline-none'
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
                   </button>
                 </div>
               </div>
@@ -124,32 +187,6 @@ export const Login = () => {
                 className='w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold py-3 px-4 rounded-xl hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-300 shadow-md hover:shadow-lg'
               >
                 Prijavi se
-              </button>
-            </div>
-            
-            <div className='relative my-6'>
-              <div className='absolute inset-0 flex items-center'>
-                <div className='w-full border-t border-gray-300'></div>
-              </div>
-              <div className='relative flex justify-center text-sm'>
-                <span className='px-4 bg-white text-gray-500'>Ili nastavite sa</span>
-              </div>
-            </div>
-            
-            <div className='grid grid-cols-2 gap-4'>
-              <button
-                type='button'
-                className='flex items-center justify-center py-3 px-4 border border-gray-300 rounded-xl hover:bg-gray-50 transition duration-300'
-              >
-                <i className='fab fa-google text-red-500 mr-2'></i>
-                <span className='text-gray-700 font-medium'>Google</span>
-              </button>
-              <button
-                type='button'
-                className='flex items-center justify-center py-3 px-4 border border-gray-300 rounded-xl hover:bg-gray-50 transition duration-300'
-              >
-                <i className='fab fa-facebook text-blue-600 mr-2'></i>
-                <span className='text-gray-700 font-medium'>Facebook</span>
               </button>
             </div>
           </form>
