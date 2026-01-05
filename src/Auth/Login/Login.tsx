@@ -38,22 +38,21 @@ export const Login: React.FC<LoginProps> = ({ onShowRegister }) => {
     }
   };
 
-  // 👇 PROMENI OVO
-// const handleSubmit = async (e: React.FormEvent) => { ... }
 
-// 👇 NA OVO
+
+
 const onSubmit = async (data: LoginFormData) => {
   console.log("📝 Podaci iz forme (prošli validaciju):", data);
   
-  // 1. Uključi loading
+  //  Uključi loading
   setIsLoading(true);
   
   try {
-    // 2. Pozovi našu API funkciju
+    //  Pozovi našu API funkciju
     console.log("🔗 Šaljem na API:", data);
     const result = await loginUser(data.email, data.password);
     
-    // 3. Proveri rezultat
+    //  Proveri rezultat
     if (result.success) {
       console.log("🎉 USPEH!");
       
@@ -63,7 +62,7 @@ const onSubmit = async (data: LoginFormData) => {
       }
       
       alert("Login uspešan!");
-      reset(); // 👈 Resetuje formu na praznu
+      reset(); //  Resetuje formu na praznu
       
     } else {
       console.log("😞 Neuspeh:", result.error);
@@ -75,7 +74,7 @@ const onSubmit = async (data: LoginFormData) => {
     alert("Došlo je do neočekivane greške");
     
   } finally {
-    // 4. Isključi loading
+    //  Isključi loading
     setIsLoading(false);
   }
 };
@@ -160,6 +159,7 @@ const onSubmit = async (data: LoginFormData) => {
                     type='email'
                     id='email'
                     {...register('email')}  
+                    autoFocus
                     className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:border-transparent transition duration-300 ${
                       errors.email 
                         ? 'border-red-300 focus:ring-red-500' 
@@ -185,7 +185,7 @@ const onSubmit = async (data: LoginFormData) => {
                  <input
                     type={showPassword ? 'text' : 'password'}
                     id='password'
-                    {...register('password')}  // 👈 ZAMENI onChange={handleChange}
+                    {...register('password')}  
                     className={`w-full pl-10 pr-12 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:border-transparent transition duration-300 ${
                       errors.password 
                         ? 'border-red-300 focus:ring-red-500' 
