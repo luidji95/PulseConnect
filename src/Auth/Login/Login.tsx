@@ -7,6 +7,19 @@ interface LoginProps {
 
 export const Login: React.FC<LoginProps> = ({ onShowRegister }) => {
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); 
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const {id, value} = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [id]: value
+    }));
+  };
   
   const handleRegisterClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -16,41 +29,54 @@ export const Login: React.FC<LoginProps> = ({ onShowRegister }) => {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault(); // Sprečava refresh stranice
-  
-  console.log("🖱️ Kliknuo sam Submit!");
-  
-  // 1. Uzmi vrednosti iz input polja
-  const emailInput = document.getElementById('email') as HTMLInputElement;
-  const passwordInput = document.getElementById('password') as HTMLInputElement;
-  
-  const email = emailInput.value;
-  const password = passwordInput.value;
-  
-  console.log("📝 Uneti podaci:");
-  console.log("Email:", email);
-  console.log("Password:", password);
-  
-  // 2. Prosta validacija
-  if (!email || !password) {
-    alert("Molimo popunite sva polja!");
-    return;
-  }
-  
-  // 3. Pozovi našu API funkciju
-  console.log("🔗 Pozivam loginUser()...");
-  const result = await loginUser(email, password);
-  
-  // 4. Proveri rezultat
-  if (result.success) {
-    console.log("🎉 USPEH! Sada ću preusmeriti na dashboard...");
-    // Ovde ćemo kasnije dodati preusmeravanje
-    alert("Login uspešan! (Za sada samo alert)");
-  } else {
-    console.log("😞 Neuspeh:", result.error);
-    alert(`Greška: ${result.error}`);
-  }
-};
+    e.preventDefault();
+    
+    console.log("🖱️ Kliknuo sam Submit!");
+    console.log("📝 Podaci iz state-a:");
+    console.log("Email:", formData.email);
+    console.log("Password:", formData.password);
+    
+    //  Prosta validacija
+    if (!formData.email || !formData.password) {
+      alert("Molimo popunite sva polja!");
+      return;
+    }
+    
+    //  Uključi loading
+    setIsLoading(true);
+    
+    try {
+      //  Pozovi našu API funkciju SA PODACIMA IZ STATE-A
+      console.log("🔗 Šaljem na API:", formData);
+      const result = await loginUser(formData.email, formData.password);
+      
+      //  Proveri rezultat
+      if (result.success) {
+        console.log("🎉 USPEH! Token:", result.data?.token);
+        
+        //  SAČUVAJ TOKEN AKO POSTOJI (zavisno od tvog API response)
+        if (result.data?.token) {
+          localStorage.setItem('authToken', result.data.token);
+          console.log("💾 Token sačuvan u localStorage");
+        }
+        
+        alert("Login uspešan! (Test poruka)");
+        // Kasnije ćemo dodati preusmeravanje na dashboard
+        
+      } else {
+        console.log("😞 Neuspeh:", result.error);
+        alert(`Greška: ${result.error}`);
+      }
+      
+    } catch (error) {
+      console.error("💥 Greška u try-catch:", error);
+      alert("Došlo je do neočekivane greške");
+      
+    } finally {
+      // Isključi loading (uvek se izvrši)
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className='min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4'>
@@ -130,9 +156,12 @@ export const Login: React.FC<LoginProps> = ({ onShowRegister }) => {
                 </div>
                 <input
                   type='email'
-                  id='email'
+                  id='email'                          
+                  value={formData.email}               
+                  onChange={handleChange}
                   className='w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition duration-300'
                   placeholder='vasemail@example.com'
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -148,14 +177,18 @@ export const Login: React.FC<LoginProps> = ({ onShowRegister }) => {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   id='password'
+                  value={formData.password}
+                  onChange={handleChange}
                   className='w-full pl-10 pr-12 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition duration-300'
                   placeholder='Unesite vašu lozinku'
+                  disabled={isLoading}
                 />
                 <div className='absolute inset-y-0 right-0 pr-3 flex items-center'>
                   <button 
                     type='button' 
                     className='text-gray-400 hover:text-gray-600 focus:outline-none'
                     onClick={() => setShowPassword(!showPassword)}
+                    disabled={isLoading}
                   >
                     <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
                   </button>
@@ -184,9 +217,24 @@ export const Login: React.FC<LoginProps> = ({ onShowRegister }) => {
             <div>
               <button
                 type='submit'
-                className='w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold py-3 px-4 rounded-xl hover:from-indigo-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-300 shadow-md hover:shadow-lg'
+                disabled={isLoading}
+                className={`w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-300 shadow-md ${
+                  isLoading 
+                    ? 'opacity-50 cursor-not-allowed' 
+                    : 'hover:from-indigo-700 hover:to-purple-700 hover:shadow-lg'
+                }`}
               >
-                Prijavi se
+                {isLoading ? (
+                  <span className="flex items-center justify-center">
+                    <svg className="animate-spin h-5 w-5 mr-3 text-white" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Prijavljivanje...
+                  </span>
+                ) : (
+                  'Prijavi se'
+                )}
               </button>
             </div>
           </form>
