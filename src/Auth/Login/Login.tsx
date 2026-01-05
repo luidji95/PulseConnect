@@ -1,25 +1,35 @@
 import React, { useState } from 'react';
 import { loginUser } from '../../lib/api';
+import { loginSchema} from '../../lib/validationSchema';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 
 interface LoginProps {
   onShowRegister?: () => void;
 }
+type LoginFormData = {
+  email: string;
+  password: string;
+};
 
 export const Login: React.FC<LoginProps> = ({ onShowRegister }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false); 
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
+
+   const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const {id, value} = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [id]: value
-    }));
-  };
+
   
   const handleRegisterClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -28,55 +38,47 @@ export const Login: React.FC<LoginProps> = ({ onShowRegister }) => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // 👇 PROMENI OVO
+// const handleSubmit = async (e: React.FormEvent) => { ... }
+
+// 👇 NA OVO
+const onSubmit = async (data: LoginFormData) => {
+  console.log("📝 Podaci iz forme (prošli validaciju):", data);
+  
+  // 1. Uključi loading
+  setIsLoading(true);
+  
+  try {
+    // 2. Pozovi našu API funkciju
+    console.log("🔗 Šaljem na API:", data);
+    const result = await loginUser(data.email, data.password);
     
-    console.log("🖱️ Kliknuo sam Submit!");
-    console.log("📝 Podaci iz state-a:");
-    console.log("Email:", formData.email);
-    console.log("Password:", formData.password);
-    
-    //  Prosta validacija
-    if (!formData.email || !formData.password) {
-      alert("Molimo popunite sva polja!");
-      return;
-    }
-    
-    //  Uključi loading
-    setIsLoading(true);
-    
-    try {
-      //  Pozovi našu API funkciju SA PODACIMA IZ STATE-A
-      console.log("🔗 Šaljem na API:", formData);
-      const result = await loginUser(formData.email, formData.password);
+    // 3. Proveri rezultat
+    if (result.success) {
+      console.log("🎉 USPEH!");
       
-      //  Proveri rezultat
-      if (result.success) {
-        console.log("🎉 USPEH! Token:", result.data?.token);
-        
-        //  SAČUVAJ TOKEN AKO POSTOJI (zavisno od tvog API response)
-        if (result.data?.token) {
-          localStorage.setItem('authToken', result.data.token);
-          console.log("💾 Token sačuvan u localStorage");
-        }
-        
-        alert("Login uspešan! (Test poruka)");
-        // Kasnije ćemo dodati preusmeravanje na dashboard
-        
-      } else {
-        console.log("😞 Neuspeh:", result.error);
-        alert(`Greška: ${result.error}`);
+      if (result.data?.token) {
+        localStorage.setItem('authToken', result.data.token);
+        console.log("💾 Token sačuvan");
       }
       
-    } catch (error) {
-      console.error("💥 Greška u try-catch:", error);
-      alert("Došlo je do neočekivane greške");
+      alert("Login uspešan!");
+      reset(); // 👈 Resetuje formu na praznu
       
-    } finally {
-      // Isključi loading (uvek se izvrši)
-      setIsLoading(false);
+    } else {
+      console.log("😞 Neuspeh:", result.error);
+      alert(`Greška: ${result.error}`);
     }
-  };
+    
+  } catch (error) {
+    console.error("💥 Greška u try-catch:", error);
+    alert("Došlo je do neočekivane greške");
+    
+  } finally {
+    // 4. Isključi loading
+    setIsLoading(false);
+  }
+};
 
   return (
     <div className='min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4'>
@@ -145,7 +147,7 @@ export const Login: React.FC<LoginProps> = ({ onShowRegister }) => {
             <p className='text-gray-600 mt-2'>Unesite svoje podatke za prijavu</p>
           </div>
           
-          <form onSubmit={handleSubmit} className='space-y-6'>
+          <form onSubmit={handleSubmit(onSubmit)} className='space-y-6'>
             <div>
               <label htmlFor='email' className='block text-sm font-medium text-gray-700 mb-2'>
                 Email adresa
@@ -154,15 +156,21 @@ export const Login: React.FC<LoginProps> = ({ onShowRegister }) => {
                 <div className='absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none'>
                   <i className='fas fa-envelope text-gray-400'></i>
                 </div>
-                <input
-                  type='email'
-                  id='email'                          
-                  value={formData.email}               
-                  onChange={handleChange}
-                  className='w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition duration-300'
-                  placeholder='vasemail@example.com'
-                  disabled={isLoading}
-                />
+                  <input
+                    type='email'
+                    id='email'
+                    {...register('email')}  
+                    className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:border-transparent transition duration-300 ${
+                      errors.email 
+                        ? 'border-red-300 focus:ring-red-500' 
+                        : 'border-gray-300 focus:ring-indigo-500'
+                    }`}
+                    placeholder='vasemail@example.com'
+                    disabled={isLoading}
+                  />
+{errors.email && (
+  <p className='mt-1 text-sm text-red-600'>{errors.email.message}</p>
+)}
               </div>
             </div>
             
@@ -174,15 +182,21 @@ export const Login: React.FC<LoginProps> = ({ onShowRegister }) => {
                 <div className='absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none'>
                   <i className='fas fa-lock text-gray-400'></i>
                 </div>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  id='password'
-                  value={formData.password}
-                  onChange={handleChange}
-                  className='w-full pl-10 pr-12 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition duration-300'
-                  placeholder='Unesite vašu lozinku'
-                  disabled={isLoading}
-                />
+                 <input
+                    type={showPassword ? 'text' : 'password'}
+                    id='password'
+                    {...register('password')}  // 👈 ZAMENI onChange={handleChange}
+                    className={`w-full pl-10 pr-12 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:border-transparent transition duration-300 ${
+                      errors.password 
+                        ? 'border-red-300 focus:ring-red-500' 
+                        : 'border-gray-300 focus:ring-indigo-500'
+                    }`}
+                    placeholder='Unesite vašu lozinku'
+                    disabled={isLoading}
+                  />
+{errors.password && (
+  <p className='mt-1 text-sm text-red-600'>{errors.password.message}</p>
+)}
                 <div className='absolute inset-y-0 right-0 pr-3 flex items-center'>
                   <button 
                     type='button' 
