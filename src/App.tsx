@@ -1,10 +1,10 @@
-import React from 'react';
-import { Auth } from './Auth/Auth';
+
+import { Login } from './Auth/Login/Login';
 
 export function App() {
   return (
     <div className="App">
-      <Auth />
+      <Login/>
     </div>
   );
 }
