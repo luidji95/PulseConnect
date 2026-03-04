@@ -1,54 +1,74 @@
-
-
+import { getToken } from "./session";
 
 const API_URL = "https://api.hr.constel.co/api/v1";
 
-// Funkcija za login
-export async function loginUser(email: string, password: string) {
-  console.log(" Šaljem podatke na API...");
-  console.log(" Email:", email);
-  console.log(" Password:", password);
-  
+type ApiOk<T> = { success: true; data: T };
+type ApiFail = { success: false; error: string };
+type ApiResult<T> = ApiOk<T> | ApiFail;
+
+type LoginResponse = {
+  token?: string;
+  [key: string]: unknown;
+};
+
+type MeResponse = {
+  id?: string;
+  email?: string;
+  username?: string;
+  [key: string]: unknown;
+};
+
+// Login
+export async function loginUser(email: string, password: string): Promise<ApiResult<LoginResponse>> {
   try {
-    // Saljemo POST request na API
     const response = await fetch(`${API_URL}/login`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        email: email,
-        password: password,
-      }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
     });
 
-    console.log(" Odgovor stigao!");
-    console.log(" Status:", response.status);
-    
-    //  Parsiramo odgovor
-    const data = await response.json();
-    console.log(" Podaci:", data);
-    
-    //  Proveri da li je uspešno
+    const data = await response.json().catch(() => ({}));
+
     if (response.ok) {
-      // USPEŠNO - vraća token i podatke
-      console.log(" Login uspešan!");
-      return { success: true, data: data };
-    } else {
-      // GREŠKA - vraća poruku o grešci
-      console.log(" Login nije uspeo:", data.error?.message);
-      return { 
-        success: false, 
-        error: data.error?.message || "Došlo je do greške" 
-      };
+      return { success: true, data };
     }
-    
-  } catch (error) {
-    // 6. Ako nešto potpuno pođe po zlu (nema interneta, itd)
-    console.error(" Velika greška:", error);
-    return { 
-      success: false, 
-      error: "Problem sa konekcijom. Proverite internet." 
+
+    return {
+      success: false,
+      error: data?.error?.message || "Došlo je do greške",
     };
+  } catch (error) {
+    console.error("Login error:", error);
+    return {
+      success: false,
+      error: "Problem sa konekcijom. Proverite internet.",
+    };
+  }
+}
+
+// /me
+export async function fetchMe(): Promise<ApiResult<MeResponse>> {
+  const token = getToken();
+  if (!token) return { success: false, error: "No token" };
+
+  try {
+    const response = await fetch(`${API_URL}/accounts/me`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      return { success: false, error: `Unauthorized (${response.status})` };
+    }
+
+    return { success: true, data };
+  } catch (err) {
+    console.error("fetchMe failed:", err);
+    return { success: false, error: "Network error" };
   }
 }

@@ -1,9 +1,11 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import { loginUser } from "../../lib/api";
 import { loginSchema } from "../../lib/validationSchema";
+import { saveToken, getToken } from "../../lib/session";
 import "./login.css";
 
 type LoginFormData = {
@@ -12,6 +14,8 @@ type LoginFormData = {
 };
 
 export const Login: React.FC = () => {
+  const navigate = useNavigate();
+
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -25,21 +29,31 @@ export const Login: React.FC = () => {
     defaultValues: { email: "", password: "" },
   });
 
+  // ✅ redirect tek posle mount-a, bez early return-a
+  useEffect(() => {
+    const token = getToken();
+    if (token) navigate("/home", { replace: true });
+  }, [navigate]);
+
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
-
     try {
       const result = await loginUser(data.email, data.password);
 
       if (result.success) {
         const token = result.data?.token;
-        if (token) localStorage.setItem("authToken", token);
+        if (!token) {
+          alert("Login uspešan, ali token nije vraćen sa servera.");
+          return;
+        }
 
+        saveToken(token);
         reset();
-        alert("Login uspešan!");
-      } else {
-        alert(`Greška: ${result.error}`);
+        navigate("/home", { replace: true });
+        return;
       }
+
+      alert(`Greška: ${result.error}`);
     } catch (err) {
       console.error(err);
       alert("Došlo je do neočekivane greške.");
@@ -58,13 +72,10 @@ export const Login: React.FC = () => {
 
         <form className="loginForm" onSubmit={handleSubmit(onSubmit)}>
           <div className="field">
-            <label className="label" htmlFor="email">
-              Email
-            </label>
+            <label className="label" htmlFor="email">Email</label>
             <input
               id="email"
               type="email"
-              autoFocus
               disabled={isLoading}
               className={`input ${errors.email ? "inputError" : ""}`}
               placeholder="vasemail@example.com"
@@ -74,9 +85,7 @@ export const Login: React.FC = () => {
           </div>
 
           <div className="field">
-            <label className="label" htmlFor="password">
-              Lozinka
-            </label>
+            <label className="label" htmlFor="password">Lozinka</label>
 
             <div className="passwordRow">
               <input
@@ -91,34 +100,21 @@ export const Login: React.FC = () => {
               <button
                 type="button"
                 className="toggleBtn"
-                onClick={() => setShowPassword((p) => !p)}
+                onClick={() => setShowPassword(p => !p)}
                 disabled={isLoading}
-                aria-label={showPassword ? "Sakrij lozinku" : "Prikaži lozinku"}
               >
                 {showPassword ? "Sakrij" : "Prikaži"}
               </button>
             </div>
 
-            {errors.password && (
-              <p className="errorText">{errors.password.message}</p>
-            )}
+            {errors.password && <p className="errorText">{errors.password.message}</p>}
           </div>
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="submitBtn"
-          >
+          <button type="submit" disabled={isLoading} className="submitBtn">
             {isLoading ? "Prijavljivanje..." : "Prijavi se"}
           </button>
-
-          <p className="hint">
-            Ako imaš problem sa nalogom, kontaktiraj admina ili proveri kredencijale.
-          </p>
         </form>
       </div>
-
-      <div className="footer">© {new Date().getFullYear()} PlusConnect</div>
     </div>
   );
 };
